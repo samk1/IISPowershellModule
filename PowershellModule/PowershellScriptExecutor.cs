@@ -1,17 +1,45 @@
-﻿using Microsoft.PowerShell;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Management.Automation;
-using System.Management.Automation.Runspaces;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace PowershellModule
+﻿namespace PowershellModule
 {
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Management.Automation;
+    using System.Management.Automation.Runspaces;
+    using System.Text;
+
     public class PowershellScriptExecutor
     {
+        public string ExecuteScript(string scriptPath)
+        {
+            return this.ExecuteScript(scriptPath, new Dictionary<string, object>());
+        }
+
+        public string ExecuteScript(string scriptPath, IDictionary<string, object> variables)
+        {
+            string absolutePath = Path.GetFullPath(scriptPath);
+
+            StringBuilder sb = new StringBuilder();
+
+            using (PowerShell ps = this.GetPowershell(this.GetInitialSessionState(variables)))
+            {
+                ps.AddCommand(absolutePath);
+
+                foreach (var resultObject in ps.Invoke())
+                {
+                    if (resultObject != null)
+                    {
+                        sb.Append(resultObject.BaseObject);
+                    }
+                }
+
+                return sb.ToString();
+            }
+        }
+
+        private static SessionStateVariableEntry CreateStateVariableEntry(KeyValuePair<string, object> kvp)
+        {
+            return new SessionStateVariableEntry(kvp.Key, kvp.Value, string.Empty);
+        }
+
         private PowerShell GetPowershell(InitialSessionState initialSessionState)
         {
             return PowerShell.Create(initialSessionState);
@@ -24,34 +52,12 @@ namespace PowershellModule
             // remove execution policy
             initialSessionState.AuthorizationManager = new AuthorizationManager("Microsoft.Powershell");
 
-            variables.ToList()
-                .ForEach(kvp => initialSessionState.Variables.Add(CreateStateVariableEntry(kvp)));
+            foreach (var variable in variables)
+            {
+                initialSessionState.Variables.Add(CreateStateVariableEntry(variable));
+            }
 
             return initialSessionState;
-        }
-
-        private static SessionStateVariableEntry CreateStateVariableEntry(KeyValuePair<string, object> kvp)
-        {
-            return new SessionStateVariableEntry(kvp.Key, kvp.Value, "");
-        }
-
-        public string ExecuteScript(string scriptPath)
-        {
-            return ExecuteScript(scriptPath, new Dictionary<string, object>());
-        }
-
-        public string ExecuteScript(string scriptPath, IDictionary<string, object> variables)
-        {
-            string absolutePath = Path.GetFullPath(scriptPath);
-
-            StringBuilder sb = new StringBuilder();
-
-            using (PowerShell ps = GetPowershell(GetInitialSessionState(variables)))
-            {
-                ps.AddCommand(absolutePath);
-                ps.Invoke().ToList().ForEach(o => sb.Append(o ?? o.BaseObject));
-                return sb.ToString();
-            }
         }
     }
 }

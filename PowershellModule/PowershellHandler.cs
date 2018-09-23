@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
-
-namespace PowershellModule
+﻿namespace PowershellModule
 {
+    using System.Collections.Generic;
+    using System.Web;
+
     public class PowershellHandler : IHttpHandler
     {
         public bool IsReusable => false;
@@ -18,7 +14,7 @@ namespace PowershellModule
 
             variables.Add("HTTP_REQUEST", context);
 
-            string output = executor.ExecuteScript(context.Request.PhysicalPath);
+            string output = executor.ExecuteScript(context.Request.PhysicalPath, variables);
             context.Response.Write(output);
         }
     }
